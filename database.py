@@ -133,7 +133,7 @@ def get_user(telegram_id):
     cursor.execute("SELECT * FROM users WHERE telegram_id=?", (telegram_id,))
     user = cursor.fetchone()
     conn.close()
-    return dict(user) if user else None
+    return dict(user) if user else {}
 
 def get_all_users():
     conn = get_db_connection()

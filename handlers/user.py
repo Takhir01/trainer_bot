@@ -22,7 +22,7 @@ PENDING_ACTIVITY_LOGS = {}
 
 def get_lang(user_id: int) -> str:
     user = database.get_user(user_id)
-    return user['language'] if user and user['language'] else 'ru'
+    return user.get('language', 'ru') if user and user.get('language') else 'ru'
 
 def calculate_base_calories(weight, height, age, gender, goal, activity_level='sedentary'):
     # Mifflin-St Jeor Equation
@@ -255,6 +255,8 @@ async def process_meal_times(message: Message, state: FSMContext):
     )
 
 def calculate_macro_norms(weight: float, goal_calories: int, goal: str) -> dict:
+    weight = weight or 70.0
+    goal = goal or 'lose_weight'
     protein_per_kg = 2.0 if goal == 'gain_weight' else 1.5
     norm_protein = int(weight * protein_per_kg)
     norm_fats = int(weight * 1.0)
