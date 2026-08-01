@@ -4,6 +4,11 @@ import os
 import config
 
 def get_db_connection():
+    if os.path.isdir("coach_database.db"):
+        try:
+            os.rmdir("coach_database.db")
+        except Exception:
+            pass
     db_dir = os.path.dirname(config.DB_PATH)
     if db_dir:
         os.makedirs(db_dir, exist_ok=True)
