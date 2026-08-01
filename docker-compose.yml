@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  bot:
+    build: .
+    container_name: ai_photo_bot
+    restart: always
+    volumes:
+      # Монтируем файл базы данных на хост-систему, чтобы данные не стирались при обновлении контейнера
+      - ./bot_database.db:/app/bot_database.db
+      # Монтируем папку загрузок (фотографии пользователей и результаты)
+      - ./downloads:/app/downloads
+    env_file:
+      - .env
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
