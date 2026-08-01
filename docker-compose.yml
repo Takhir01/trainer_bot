@@ -6,8 +6,8 @@ services:
     container_name: thirty_five_coach_bot
     restart: always
     volumes:
-      # Монтируем файл базы данных на хост-систему, чтобы данные не стирались при обновлении контейнера
-      - ./coach_database.db:/app/coach_database.db
+      # Монтируем папку с базой данных на хост-систему
+      - ./data:/app/data
       # Монтируем папку загрузок (фотографии пользователей и результаты)
       - ./downloads:/app/downloads
     env_file:

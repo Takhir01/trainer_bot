@@ -20,4 +20,4 @@ CARD_NUMBER = os.getenv("CARD_NUMBER", "8600 0000 0000 0000")
 CARD_HOLDER = os.getenv("CARD_HOLDER", "Ivan Ivanov")
 
 # DB Path
-DB_PATH = os.getenv("DB_PATH", "coach_database.db")
+DB_PATH = os.getenv("DB_PATH", "data/coach_database.db")
