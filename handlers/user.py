@@ -377,7 +377,7 @@ async def handle_food_log(message: Message, state: FSMContext):
     lang = get_lang(message.from_user.id)
     t = locales.LOCALES[lang]
     await state.set_state(FoodLogStates.waiting_for_food_photo)
-    await message.answer(t['send_food_photo'])
+    await message.answer(t['send_food_photo'], reply_markup=keyboards.get_cancel_food_keyboard(lang))
 
 @user_router.message(FoodLogStates.waiting_for_food_photo, F.photo)
 async def process_food_photo(message: Message, state: FSMContext):
@@ -550,7 +550,7 @@ async def handle_workout_log(message: Message, state: FSMContext):
     t = locales.LOCALES[lang]
     
     await state.set_state(WorkoutLogStates.waiting_for_activity_desc)
-    await message.answer(t['ask_workout_desc'])
+    await message.answer(t['ask_workout_desc'], reply_markup=keyboards.get_cancel_activity_keyboard(lang))
 
 @user_router.message(WorkoutLogStates.waiting_for_activity_desc, F.text)
 async def process_activity_text(message: Message, state: FSMContext):
@@ -687,6 +687,32 @@ async def process_del_activity(callback: CallbackQuery):
     await callback.answer(t['deleted_success'])
     try:
         await callback.message.edit_text(f"🗑️ {t['deleted_success']}", reply_markup=None)
+    except Exception:
+        pass
+
+# =====================================================================
+# Cancel Handlers
+# =====================================================================
+
+@user_router.callback_query(F.data == "cancel_food")
+async def process_cancel_food(callback: CallbackQuery, state: FSMContext):
+    lang = get_lang(callback.from_user.id)
+    t = locales.LOCALES[lang]
+    await state.clear()
+    await callback.answer(t['action_cancelled'])
+    try:
+        await callback.message.edit_text(f"↩️ {t['action_cancelled']}", reply_markup=None)
+    except Exception:
+        pass
+
+@user_router.callback_query(F.data == "cancel_activity")
+async def process_cancel_activity(callback: CallbackQuery, state: FSMContext):
+    lang = get_lang(callback.from_user.id)
+    t = locales.LOCALES[lang]
+    await state.clear()
+    await callback.answer(t['action_cancelled'])
+    try:
+        await callback.message.edit_text(f"↩️ {t['action_cancelled']}", reply_markup=None)
     except Exception:
         pass
 

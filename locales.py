@@ -71,8 +71,10 @@ LOCALES = {
         'confirm_save_prompt': 'Сохранить запись в дневник?',
         'btn_save': '💾 Сохранить',
         'btn_delete': '🗑️ Удалить',
+        'btn_cancel': '❌ Отмена',
         'saved_success': 'Запись успешно сохранена в дневник!',
         'deleted_success': 'Запись удалена.',
+        'action_cancelled': '↩️ Действие отменено.',
         'expired_action': '⚠️ Срок действия кнопки истек.',
         
         # Advisor
@@ -168,8 +170,10 @@ LOCALES = {
         'confirm_save_prompt': 'Kundalikka saqlansinmi?',
         'btn_save': '💾 Saqlash',
         'btn_delete': '🗑️ O\'chirish',
+        'btn_cancel': '❌ Bekor qilish',
         'saved_success': 'Yozuv kundalikka muvaffaqiyatli saqlandi!',
         'deleted_success': 'Yozuv o\'chirildi.',
+        'action_cancelled': '↩️ Amal bekor qilindi.',
         'expired_action': '⚠️ Tugma muddati tugadi.',
         
         # Advisor

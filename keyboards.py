@@ -112,6 +112,9 @@ def get_confirm_food_keyboard(lang: str, token: str):
         [
             InlineKeyboardButton(text=t['btn_save'], callback_data=f"save_food:{token}"),
             InlineKeyboardButton(text=t['btn_delete'], callback_data=f"del_food:{token}")
+        ],
+        [
+            InlineKeyboardButton(text=t['btn_cancel'], callback_data="cancel_food")
         ]
     ])
     return keyboard
@@ -122,8 +125,25 @@ def get_confirm_activity_keyboard(lang: str, token: str):
         [
             InlineKeyboardButton(text=t['btn_save'], callback_data=f"save_act:{token}"),
             InlineKeyboardButton(text=t['btn_delete'], callback_data=f"del_act:{token}")
+        ],
+        [
+            InlineKeyboardButton(text=t['btn_cancel'], callback_data="cancel_activity")
         ]
     ])
     return keyboard
 
+def get_cancel_food_keyboard(lang: str):
+    """Keyboard shown while waiting for food photo/text input."""
+    t = LOCALES[lang]
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=t['btn_cancel'], callback_data="cancel_food")]
+    ])
+    return keyboard
 
+def get_cancel_activity_keyboard(lang: str):
+    """Keyboard shown while waiting for activity description input."""
+    t = LOCALES[lang]
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=t['btn_cancel'], callback_data="cancel_activity")]
+    ])
+    return keyboard

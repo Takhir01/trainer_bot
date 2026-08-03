@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 async def check_and_send_startup_update(bot: Bot):
     import os
+    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
     update_file = "UPDATE_TEXT.txt"
     if os.path.exists(update_file):
         try:
@@ -26,12 +27,16 @@ async def check_and_send_startup_update(bot: Bot):
             
             if update_text:
                 users = database.get_all_users()
+                start_kb = InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="🚀 Запустить / Ishga tushirish", url=f"https://t.me/{(await bot.get_me()).username}?start=update")]
+                ])
                 count = 0
                 for user in users:
                     try:
                         await bot.send_message(
                             user['telegram_id'],
-                            f"🚀 <b>ВНИМАНИЕ! Бот обновлен!</b> 🚀\n\n{update_text}\n\n👉 <b>Нажмите /start</b>, чтобы применить обновления и обновить меню!"
+                            f"🚀 <b>ВНИМАНИЕ! Бот обновлен!</b> 🚀\n\n{update_text}\n\n👉 Нажмите кнопку ниже или введите /start, чтобы применить обновления!",
+                            reply_markup=start_kb
                         )
                         count += 1
                     except Exception as e:
