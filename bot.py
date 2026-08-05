@@ -59,8 +59,8 @@ async def main():
     
     dp = Dispatcher(storage=MemoryStorage())
 
-    dp.include_router(user_router)
     dp.include_router(admin_router)
+    dp.include_router(user_router)
 
     try:
         print("Bot ThirtyFiveCoach is starting...")
