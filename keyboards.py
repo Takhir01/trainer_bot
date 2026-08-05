@@ -75,7 +75,8 @@ def get_fasting_plans_keyboard(lang: str) -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=t['fasting_plan_light'], callback_data="fast_plan:light")],
         [InlineKeyboardButton(text=t['fasting_plan_medium'], callback_data="fast_plan:medium")],
-        [InlineKeyboardButton(text=t['fasting_plan_hard'], callback_data="fast_plan:hard")]
+        [InlineKeyboardButton(text=t['fasting_plan_hard'], callback_data="fast_plan:hard")],
+        [InlineKeyboardButton(text=t['btn_back'], callback_data="fasting_back")]
     ])
     return keyboard
 
@@ -108,14 +109,16 @@ def get_advisor_meals_keyboard(lang):
         [InlineKeyboardButton(text=t['meal_lunch'], callback_data="adv_meal:lunch")],
         [InlineKeyboardButton(text=t['meal_dinner'], callback_data="adv_meal:dinner")],
         [InlineKeyboardButton(text=t['meal_snack'], callback_data="adv_meal:snack")],
+        [InlineKeyboardButton(text=t['btn_back'], callback_data="back_to_main")]
     ])
     return keyboard
 
 def get_workout_location_keyboard(lang):
     t = LOCALES[lang]
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=t['location_home'], callback_data="workout_loc:home")],
-        [InlineKeyboardButton(text=t['location_gym'], callback_data="workout_loc:gym")]
+        [InlineKeyboardButton(text=t['location_home'], callback_data="gen_loc:home")],
+        [InlineKeyboardButton(text=t['location_gym'], callback_data="gen_loc:gym")],
+        [InlineKeyboardButton(text=t['btn_back'], callback_data="back_to_main")]
     ])
     return keyboard
 
@@ -156,7 +159,7 @@ def get_cancel_food_keyboard(lang: str):
     """Keyboard shown while waiting for food photo/text input."""
     t = LOCALES[lang]
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=t['btn_cancel'], callback_data="cancel_food")]
+        [InlineKeyboardButton(text=t['btn_back'], callback_data="cancel_food")]
     ])
     return keyboard
 
@@ -164,6 +167,14 @@ def get_cancel_activity_keyboard(lang: str):
     """Keyboard shown while waiting for activity description input."""
     t = LOCALES[lang]
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=t['btn_cancel'], callback_data="cancel_activity")]
+        [InlineKeyboardButton(text=t['btn_back'], callback_data="cancel_activity")]
+    ])
+    return keyboard
+
+def get_cancel_general_keyboard(lang: str):
+    """General back/cancel keyboard."""
+    t = LOCALES[lang]
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=t['btn_back'], callback_data="back_to_main")]
     ])
     return keyboard

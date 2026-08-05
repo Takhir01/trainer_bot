@@ -734,6 +734,45 @@ async def process_cancel_activity(callback: CallbackQuery, state: FSMContext):
     except Exception:
         pass
 
+@user_router.callback_query(F.data == "back_to_main")
+async def process_back_to_main(callback: CallbackQuery, state: FSMContext):
+    lang = get_lang(callback.from_user.id)
+    t = locales.LOCALES[lang]
+    await state.clear()
+    await callback.answer()
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
+    user = database.get_user(callback.from_user.id)
+    end_date = ""
+    if user and user.get('subscription_end_date'):
+        try:
+            end_date = datetime.datetime.fromisoformat(user['subscription_end_date']).strftime("%d.%m.%Y")
+        except Exception:
+            pass
+    await callback.message.answer(
+        t['welcome_back'].format(end_date=end_date),
+        reply_markup=keyboards.get_main_menu(lang, is_admin=callback.from_user.id in config.ADMIN_IDS)
+    )
+
+@user_router.message(F.text.in_(["🔙 Назад", "🔙 Orqaga", "Назад", "Orqaga"]))
+async def handle_back_button(message: Message, state: FSMContext):
+    await state.clear()
+    lang = get_lang(message.from_user.id)
+    t = locales.LOCALES[lang]
+    user = database.get_user(message.from_user.id)
+    end_date = ""
+    if user and user.get('subscription_end_date'):
+        try:
+            end_date = datetime.datetime.fromisoformat(user['subscription_end_date']).strftime("%d.%m.%Y")
+        except Exception:
+            pass
+    await message.answer(
+        t['welcome_back'].format(end_date=end_date),
+        reply_markup=keyboards.get_main_menu(lang, is_admin=message.from_user.id in config.ADMIN_IDS)
+    )
+
 
 FASTING_HOURS = {
     'light': 14,
@@ -822,6 +861,11 @@ async def process_fasting_plans(callback: CallbackQuery):
     t = locales.LOCALES[lang]
     await callback.answer()
     await callback.message.edit_text(t['fasting_select_plan'], reply_markup=keyboards.get_fasting_plans_keyboard(lang))
+
+@user_router.callback_query(F.data == "fasting_back")
+async def process_fasting_back(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await handle_fasting_button(callback.message, state)
 
 @user_router.callback_query(F.data.startswith("fast_plan:"))
 async def process_set_fast_plan(callback: CallbackQuery):
@@ -1126,7 +1170,7 @@ async def process_update_weight_btn(callback: CallbackQuery, state: FSMContext):
     t = locales.LOCALES[lang]
     await callback.answer()
     await state.set_state(UpdateWeightStates.waiting_for_weight)
-    await callback.message.answer(t['ask_new_weight'])
+    await callback.message.answer(t['ask_new_weight'], reply_markup=keyboards.get_cancel_general_keyboard(lang))
 
 @user_router.message(UpdateWeightStates.waiting_for_weight, F.text)
 async def process_new_weight(message: Message, state: FSMContext):
@@ -1136,7 +1180,7 @@ async def process_new_weight(message: Message, state: FSMContext):
     try:
         new_weight = float(message.text.replace(',', '.'))
     except ValueError:
-        await message.answer(t['ask_new_weight'])
+        await message.answer(t['ask_new_weight'], reply_markup=keyboards.get_cancel_general_keyboard(lang))
         return
         
     database.update_user_profile(message.from_user.id, weight=new_weight)
@@ -1158,31 +1202,6 @@ async def handle_settings(message: Message, state: FSMContext):
     )
     await message.answer(welcome_msg, reply_markup=keyboards.get_language_selection_keyboard())
 
-# Fallback text handler for free chat with AI Coach
-@user_router.message(F.text)
-async def handle_free_chat(message: Message, state: FSMContext):
-    if not await check_paywall(message): return
-    lang = get_lang(message.from_user.id)
-    
-    user = database.get_user(message.from_user.id)
-    daily = database.get_or_create_daily_log(message.from_user.id)
-    
-    goal_cals = calculate_base_calories(user['weight'], user['height'], user['age'], user['gender'], user['goal'], user['activity_level'])
-    remaining = goal_cals - daily['calories_consumed'] + daily['calories_burned']
-    
-    await message.bot.send_chat_action(message.chat.id, "typing")
-    
-    import services.gemini
-    reply = await services.gemini.chat_with_coach(
-        telegram_id=message.from_user.id,
-        message=message.text,
-        user_data=user,
-        remaining_calories=remaining,
-        lang=lang
-    )
-    
-    await message.answer(reply)
-
 # =====================================================================
 # Recipe / Menu
 # =====================================================================
@@ -1193,27 +1212,7 @@ async def handle_recipe_request(message: Message, state: FSMContext):
     if not await check_paywall(message): return
     lang = get_lang(message.from_user.id)
     t = locales.LOCALES[lang]
-    await message.answer(t['ask_recipe'])
-    await state.set_state(RecipeStates.waiting_for_ingredients)
-
-@user_router.message(RecipeStates.waiting_for_ingredients, F.text)
-async def process_recipe_text(message: Message, state: FSMContext):
-    lang = get_lang(message.from_user.id)
-    t = locales.LOCALES[lang]
-    await message.answer(t['generating_recipe'])
-    
-
-# =====================================================================
-# Recipe / Menu
-# =====================================================================
-from states import RecipeStates
-
-@user_router.message(F.text.in_([locales.LOCALES['ru']['btn_recipe'], locales.LOCALES['uz']['btn_recipe']]))
-async def handle_recipe_request(message: Message, state: FSMContext):
-    if not await check_paywall(message): return
-    lang = get_lang(message.from_user.id)
-    t = locales.LOCALES[lang]
-    await message.answer(t['ask_recipe'])
+    await message.answer(t['ask_recipe'], reply_markup=keyboards.get_cancel_general_keyboard(lang))
     await state.set_state(RecipeStates.waiting_for_ingredients)
 
 @user_router.message(RecipeStates.waiting_for_ingredients, F.text)
@@ -1259,3 +1258,28 @@ async def process_recipe_photo(message: Message, state: FSMContext):
     suggestion = await services.gemini.analyze_recipe(img_bytes, remaining, user['goal'], is_photo=True, lang=lang, country=user.get('country', ''))
     await message.answer(suggestion)
     await state.clear()
+
+# Fallback text handler for free chat with AI Coach (MUST BE LAST)
+@user_router.message(F.text)
+async def handle_free_chat(message: Message, state: FSMContext):
+    if not await check_paywall(message): return
+    lang = get_lang(message.from_user.id)
+    
+    user = database.get_user(message.from_user.id)
+    daily = database.get_or_create_daily_log(message.from_user.id)
+    
+    goal_cals = calculate_base_calories(user['weight'], user['height'], user['age'], user['gender'], user['goal'], user['activity_level'])
+    remaining = goal_cals - daily['calories_consumed'] + daily['calories_burned']
+    
+    await message.bot.send_chat_action(message.chat.id, "typing")
+    
+    import services.gemini
+    reply = await services.gemini.chat_with_coach(
+        telegram_id=message.from_user.id,
+        message=message.text,
+        user_data=user,
+        remaining_calories=remaining,
+        lang=lang
+    )
+    
+    await message.answer(reply)
