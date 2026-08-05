@@ -68,6 +68,7 @@ def get_fasting_menu_keyboard(lang: str, is_active: bool = False) -> InlineKeybo
         buttons.append([InlineKeyboardButton(text=t['btn_start_fasting'], callback_data="fasting_start")])
     
     buttons.append([InlineKeyboardButton(text=t['btn_fasting_settings'], callback_data="fasting_plans")])
+    buttons.append([InlineKeyboardButton(text=t['btn_back'], callback_data="back_to_main")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def get_fasting_plans_keyboard(lang: str) -> InlineKeyboardMarkup:

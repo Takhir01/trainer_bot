@@ -447,13 +447,7 @@ async def handle_generate_workout(message: Message, state: FSMContext):
     t = locales.LOCALES[lang]
     
     await state.set_state(GenerateWorkoutStates.waiting_for_location)
-    # Reusing the existing keyboard but we will catch callback differently if needed.
-    # Actually, let's just create a new keyboard for it, or use the existing one and change the callback.
-    keyboard = keyboards.InlineKeyboardMarkup(inline_keyboard=[
-        [keyboards.InlineKeyboardButton(text=t['location_home'], callback_data="gen_loc:home")],
-        [keyboards.InlineKeyboardButton(text=t['location_gym'], callback_data="gen_loc:gym")]
-    ])
-    await message.answer(t['ask_workout_location'], reply_markup=keyboard)
+    await message.answer(t['ask_workout_location'], reply_markup=keyboards.get_workout_location_keyboard(lang))
 
 @user_router.callback_query(GenerateWorkoutStates.waiting_for_location, F.data.startswith("gen_loc:"))
 async def process_gen_location(callback: CallbackQuery, state: FSMContext):
@@ -464,7 +458,7 @@ async def process_gen_location(callback: CallbackQuery, state: FSMContext):
     
     await state.update_data(location=location)
     await state.set_state(GenerateWorkoutStates.waiting_for_duration)
-    await callback.message.edit_text(t['ask_workout_duration_plan'])
+    await callback.message.edit_text(t['ask_workout_duration_plan'], reply_markup=keyboards.get_cancel_general_keyboard(lang))
 
 @user_router.message(GenerateWorkoutStates.waiting_for_duration, F.text)
 async def process_gen_duration(message: Message, state: FSMContext):
@@ -472,7 +466,7 @@ async def process_gen_duration(message: Message, state: FSMContext):
     t = locales.LOCALES[lang]
     
     if not message.text.isdigit():
-        await message.answer(t['ask_workout_duration_plan'])
+        await message.answer(t['ask_workout_duration_plan'], reply_markup=keyboards.get_cancel_general_keyboard(lang))
         return
         
     duration = int(message.text)
@@ -482,9 +476,9 @@ async def process_gen_duration(message: Message, state: FSMContext):
     
     if location == 'home':
         await state.set_state(GenerateWorkoutStates.waiting_for_equipment)
-        await message.answer(t['ask_home_equipment'])
+        await message.answer(t['ask_home_equipment'], reply_markup=keyboards.get_cancel_general_keyboard(lang))
     else:
-        # Gym - usually has all equipment, we can skip asking or just pass "gym equipment"
+        # Gym - usually has all equipment
         await finish_generate_workout(message, state, lang, location, duration, "all gym equipment")
 
 @user_router.message(GenerateWorkoutStates.waiting_for_equipment, F.text)
@@ -532,9 +526,10 @@ async def finish_generate_workout(message: Message, state: FSMContext, lang: str
         
     calories = int(cal_match.group(1)) if cal_match else int(duration) * 5 # fallback
     
-    # Add a Done button
+    # Add a Done button and Back button
     kb = keyboards.InlineKeyboardMarkup(inline_keyboard=[
-        [keyboards.InlineKeyboardButton(text="✅ Сделал! / Bajarildi!" if lang == 'ru' else "✅ Bajarildi!", callback_data=f"done_workout:{calories}")]
+        [keyboards.InlineKeyboardButton(text="✅ Сделал! / Bajarildi!" if lang == 'ru' else "✅ Bajarildi!", callback_data=f"done_workout:{calories}")],
+        [keyboards.InlineKeyboardButton(text=t['btn_back'], callback_data="back_to_main")]
     ])
     
     # Split message if it's too long (Telegram limit is 4096)
