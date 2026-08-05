@@ -188,3 +188,14 @@ def get_cancel_general_keyboard(lang: str):
         [InlineKeyboardButton(text=t['btn_back'], callback_data="back_to_main")]
     ])
     return keyboard
+
+def get_workout_completion_keyboard(lang: str, calories: int) -> InlineKeyboardMarkup:
+    t = LOCALES[lang]
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=t['workout_ratio_100'], callback_data=f"done_perc:{calories}:100")],
+        [InlineKeyboardButton(text=t['workout_ratio_75'], callback_data=f"done_perc:{calories}:75")],
+        [InlineKeyboardButton(text=t['workout_ratio_50'], callback_data=f"done_perc:{calories}:50")],
+        [InlineKeyboardButton(text=t['workout_ratio_25'], callback_data=f"done_perc:{calories}:25")],
+        [InlineKeyboardButton(text=t['btn_back'], callback_data="back_to_main")]
+    ])
+    return keyboard

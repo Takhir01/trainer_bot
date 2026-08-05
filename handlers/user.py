@@ -547,14 +547,41 @@ async def finish_generate_workout(message: Message, state: FSMContext, lang: str
 async def process_done_workout(callback: CallbackQuery):
     if not await check_paywall(callback, telegram_id=callback.from_user.id): return
     calories = int(callback.data.split(":")[1])
-    database.log_workout(callback.from_user.id, duration_min=0, calories_burned=calories)
+    lang = get_lang(callback.from_user.id)
+    t = locales.LOCALES[lang]
+    await callback.answer()
+    try:
+        await callback.message.edit_text(
+            f"{callback.message.text}\n\n{t['ask_workout_completion_ratio']}",
+            reply_markup=keyboards.get_workout_completion_keyboard(lang, calories),
+            parse_mode="HTML"
+        )
+    except Exception:
+        await callback.message.answer(
+            t['ask_workout_completion_ratio'],
+            reply_markup=keyboards.get_workout_completion_keyboard(lang, calories)
+        )
+
+@user_router.callback_query(F.data.startswith("done_perc:"))
+async def process_done_workout_perc(callback: CallbackQuery):
+    if not await check_paywall(callback, telegram_id=callback.from_user.id): return
+    parts = callback.data.split(":")
+    base_calories = int(parts[1])
+    percent = int(parts[2])
+    
+    actual_calories = int(round(base_calories * (percent / 100.0)))
+    database.log_workout(callback.from_user.id, duration_min=0, calories_burned=actual_calories)
     
     lang = get_lang(callback.from_user.id)
-    text = f"✅ Отлично! Тренировка выполнена, {calories} ккал записаны в статистику." if lang == 'ru' else f"✅ Ajoyib! Mashg'ulot bajarildi, {calories} kkal statistikaga yozildi."
+    t = locales.LOCALES[lang]
+    text = t['workout_completion_logged'].format(percent=percent, actual_calories=actual_calories)
     
-    await callback.message.edit_reply_markup(reply_markup=None)
     await callback.answer(text, show_alert=True)
-    await callback.message.answer(text)
+    try:
+        await callback.message.edit_reply_markup(reply_markup=None)
+    except Exception:
+        pass
+    await callback.message.answer(text, reply_markup=keyboards.get_main_menu(lang, is_admin=callback.from_user.id in config.ADMIN_IDS))
 
 @user_router.message(F.text.in_([locales.LOCALES['ru']['btn_workout_log'], locales.LOCALES['uz']['btn_workout_log']]))
 async def handle_workout_log(message: Message, state: FSMContext):
