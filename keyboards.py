@@ -48,15 +48,24 @@ def get_activity_level_keyboard(lang):
 
 def get_main_menu(lang, is_admin=False):
     t = LOCALES[lang]
-    keyboard = ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text=t['btn_advisor']), KeyboardButton(text=t['btn_generate_workout'])],
-            [KeyboardButton(text=t['btn_food_log']), KeyboardButton(text=t['btn_workout_log'])],
-            [KeyboardButton(text=t['btn_recipe']), KeyboardButton(text=t['btn_fasting'])],
-            [KeyboardButton(text=t['btn_stats']), KeyboardButton(text=t['btn_settings'])]
-        ],
-        resize_keyboard=True
-    )
+    rows = [
+        [KeyboardButton(text=t['btn_advisor']), KeyboardButton(text=t['btn_generate_workout'])],
+        [KeyboardButton(text=t['btn_food_log']), KeyboardButton(text=t['btn_workout_log'])],
+        [KeyboardButton(text=t['btn_recipe']), KeyboardButton(text=t['btn_fasting'])],
+        [KeyboardButton(text=t['btn_stats']), KeyboardButton(text=t['btn_settings'])]
+    ]
+    if is_admin:
+        rows.append([KeyboardButton(text="👑 Админ панель")])
+    keyboard = ReplyKeyboardMarkup(keyboard=rows, resize_keyboard=True)
+    return keyboard
+
+def get_admin_panel_keyboard():
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📊 Статистика пользователей", callback_data="admin_stats_view")],
+        [InlineKeyboardButton(text="👥 Последние 10 пользователей", callback_data="admin_users_view")],
+        [InlineKeyboardButton(text="📢 Сделать рассылку", callback_data="admin_broadcast_prompt")],
+        [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_main")]
+    ])
     return keyboard
 
 def get_fasting_menu_keyboard(lang: str, is_active: bool = False) -> InlineKeyboardMarkup:

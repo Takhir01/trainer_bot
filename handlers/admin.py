@@ -86,3 +86,82 @@ async def handle_broadcast(message: Message):
             pass
             
     await message.answer(f"✅ Рассылка успешно отправлена {count} пользователям.")
+
+import keyboards
+
+@admin_router.message(Command("admin"))
+@admin_router.message(F.text == "👑 Админ панель")
+async def handle_admin_panel(message: Message):
+    import config
+    if message.from_user.id not in config.ADMIN_IDS:
+        return
+        
+    await message.answer(
+        "👑 <b>Панель администратора</b>\n\nВыберите нужный раздел ниже:",
+        reply_markup=keyboards.get_admin_panel_keyboard(),
+        parse_mode="HTML"
+    )
+
+@admin_router.callback_query(F.data == "admin_stats_view")
+async def process_admin_stats(callback: CallbackQuery):
+    import config
+    if callback.from_user.id not in config.ADMIN_IDS:
+        await callback.answer("У вас нет прав.")
+        return
+        
+    stats = database.get_admin_stats()
+    
+    ru_cnt = stats['langs'].get('ru', 0)
+    uz_cnt = stats['langs'].get('uz', 0)
+    
+    text = (
+        f"📊 <b>Статистика пользователей ThirtyFiveCoach:</b>\n\n"
+        f"👥 Всего пользователей: <b>{stats['total_users']}</b>\n"
+        f"⭐ Активных подписок: <b>{stats['active_subscriptions']}</b>\n"
+        f"🔥 Активных сегодня: <b>{stats['active_today']}</b>\n"
+        f"⏳ Голодают прямо сейчас: <b>{stats['active_fasting']}</b>\n"
+        f"🏋️ Сгенерировано тренировок: <b>{stats['total_workouts']}</b>\n"
+        f"💳 Ожидают проверки чеков: <b>{stats['pending_payments']}</b>\n\n"
+        f"🌐 <b>По языкам:</b>\n"
+        f"🇷🇺 Русский: {ru_cnt}\n"
+        f"🇺🇿 Узбекский: {uz_cnt}"
+    )
+    
+    await callback.answer()
+    await callback.message.edit_text(text, reply_markup=keyboards.get_admin_panel_keyboard(), parse_mode="HTML")
+
+@admin_router.callback_query(F.data == "admin_users_view")
+async def process_admin_users(callback: CallbackQuery):
+    import config
+    if callback.from_user.id not in config.ADMIN_IDS:
+        await callback.answer("У вас нет прав.")
+        return
+        
+    users = database.get_recent_users(10)
+    
+    lines = ["👥 <b>Последние 10 пользователей:</b>\n"]
+    for u in users:
+        uname = f"@{u['username']}" if u.get('username') else u.get('first_name', 'Без имени')
+        lang = "🇷🇺" if u.get('language') == 'ru' else "🇺🇿"
+        sub_status = "✅ Подписка" if u.get('subscription_end_date') else "❌ Нет подписки"
+        lines.append(f"• ID: <code>{u['telegram_id']}</code> | {uname} | {lang} | {sub_status}")
+        
+    await callback.answer()
+    await callback.message.edit_text("\n".join(lines), reply_markup=keyboards.get_admin_panel_keyboard(), parse_mode="HTML")
+
+@admin_router.callback_query(F.data == "admin_broadcast_prompt")
+async def process_admin_broadcast_prompt(callback: CallbackQuery):
+    import config
+    if callback.from_user.id not in config.ADMIN_IDS:
+        await callback.answer("У вас нет прав.")
+        return
+        
+    text = (
+        "📢 <b>Рассылка пользователям</b>\n\n"
+        "Чтобы отправить рассылку всем пользователям, напишите команду:\n"
+        "<code>/broadcast Текст сообщения</code>\n\n"
+        "Пример:\n"
+        "<code>/broadcast Вышло новое обновление! Добавлено интервальное голодание!</code>"
+    )
+    await callback.answer()
+    await callback.message.edit_text(text, reply_markup=keyboards.get_admin_panel_keyboard(), parse_mode="HTML")

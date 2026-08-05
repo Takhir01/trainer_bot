@@ -451,4 +451,54 @@ def get_active_fasting_users():
     conn.close()
     return [dict(u) for u in users]
 
+def get_admin_stats():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT COUNT(*) as cnt FROM users")
+    total_users = cursor.fetchone()['cnt']
+    
+    now_str = get_tashkent_now().isoformat()
+    cursor.execute("SELECT COUNT(*) as cnt FROM users WHERE subscription_end_date IS NOT NULL AND subscription_end_date > ?", (now_str,))
+    active_subscriptions = cursor.fetchone()['cnt']
+    
+    cursor.execute("SELECT COUNT(*) as cnt FROM users WHERE fasting_is_active = 1")
+    active_fasting = cursor.fetchone()['cnt']
+    
+    today_str = get_tashkent_now().date().isoformat()
+    cursor.execute("SELECT COUNT(*) as cnt FROM daily_logs WHERE date = ? AND (calories_consumed > 0 OR workout_duration_min > 0 OR calories_burned > 0)", (today_str,))
+    active_today = cursor.fetchone()['cnt']
+    
+    try:
+        cursor.execute("SELECT COUNT(*) as cnt FROM workout_history")
+        total_workouts = cursor.fetchone()['cnt']
+    except Exception:
+        total_workouts = 0
+        
+    cursor.execute("SELECT COUNT(*) as cnt FROM payments WHERE status = 'pending'")
+    pending_payments = cursor.fetchone()['cnt']
+    
+    cursor.execute("SELECT language, COUNT(*) as cnt FROM users GROUP BY language")
+    langs = {r['language']: r['cnt'] for r in cursor.fetchall()}
+    
+    conn.close()
+    
+    return {
+        "total_users": total_users,
+        "active_subscriptions": active_subscriptions,
+        "active_fasting": active_fasting,
+        "active_today": active_today,
+        "total_workouts": total_workouts,
+        "pending_payments": pending_payments,
+        "langs": langs
+    }
+
+def get_recent_users(limit=10):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT telegram_id, username, first_name, language, subscription_end_date, created_at FROM users ORDER BY id DESC LIMIT ?", (limit,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
 
