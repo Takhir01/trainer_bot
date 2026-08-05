@@ -29,7 +29,7 @@ LOCALES = {
         'country_other': '🌐 Другая',
         'btn_change_country': '🌍 Изменить страну',
         'country_updated': '✅ Страна обновлена: {country}! Меню и рецепты теперь будут учитывать вашу локацию.',
-        'registration_complete': 'Отлично! 🎉 Профиль настроен.\nВаша базовая норма калорий: {calories} ккал.\nУ вас есть пробный период (3 дня) или вам нужно оплатить подписку (зависит от настроек).',
+        'registration_complete': 'Отлично! 🎉 Профиль настроен.\nВаша базовая норма калорий: {calories} ккал.\n🎁 Вам подарена подписка на 1 месяц бесплатно! Наслаждайтесь тренировками и питанием!',
         
         # Main Menu
         'btn_advisor': '🤖 Советчик ИИ',
@@ -155,7 +155,7 @@ LOCALES = {
         'country_other': '🌐 Boshqa',
         'btn_change_country': '🌍 Mamlakatni o\'zgartirish',
         'country_updated': '✅ Mamlakat yangilandi: {country}! Menyular endi joylashuvingizga moslashtiriladi.',
-        'registration_complete': 'Ajoyib! 🎉 Profil sozlandi.\nSizning kaloriya normangiz: {calories} kkal.',
+        'registration_complete': 'Ajoyib! 🎉 Profil sozlandi.\nSizning kaloriya normangiz: {calories} kkal.\n🎁 Sizga 1 oylik bepul sovg\'a obunasi taqdim etildi! Mashg\'ulotlar va ovqatlanishdan rohatlaning!',
         
         # Main Menu
         'btn_advisor': '🤖 AI Maslahatchi',

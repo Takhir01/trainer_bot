@@ -242,8 +242,8 @@ async def process_meal_times(message: Message, state: FSMContext):
     # Simple store for now
     database.update_user_profile(message.from_user.id, meal_times=json.dumps([meal_times_str]))
     
-    # 3 days trial
-    database.extend_subscription(message.from_user.id, days=3)
+    # 1 month (30 days) gift trial
+    database.extend_subscription(message.from_user.id, days=30)
     
     user = database.get_user(message.from_user.id)
     cals = calculate_base_calories(user['weight'], user['height'], user['age'], user['gender'], user['goal'], user['activity_level'])
