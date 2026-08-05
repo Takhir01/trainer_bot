@@ -93,11 +93,65 @@ async def send_weekly_reports(bot: Bot):
         except Exception as e:
             logger.error(f"Error sending weekly report to {user['telegram_id']}: {e}")
 
+async def send_fasting_reminders(bot: Bot):
+    now = database.get_tashkent_now()
+    active_users = database.get_active_fasting_users()
+    
+    from handlers.user import FASTING_HOURS, get_fasting_stage_info
+    import locales
+    
+    for user in active_users:
+        telegram_id = user['telegram_id']
+        lang = user.get('language', 'ru')
+        t = locales.LOCALES.get(lang, locales.LOCALES['ru'])
+        
+        if not user.get('fasting_is_active') or not user.get('fasting_start_time'):
+            continue
+            
+        try:
+            start_dt = datetime.datetime.fromisoformat(user['fasting_start_time'])
+            plan = user.get('fasting_plan') or 'medium'
+            target_hours = FASTING_HOURS.get(plan, 16)
+            end_dt = start_dt + datetime.timedelta(hours=target_hours)
+            
+            diff_seconds = (now - start_dt).total_seconds()
+            if diff_seconds < 0:
+                continue
+                
+            elapsed_hours = int(diff_seconds // 3600)
+            
+            # 1. Check 30-minute pre-end warning
+            remaining_seconds = (end_dt - now).total_seconds()
+            if 0 < remaining_seconds <= 1800 and not user.get('fasting_notified_end_warn'):
+                try:
+                    await bot.send_message(telegram_id, t['fasting_warn_end'], parse_mode="HTML")
+                    database.update_fasting_state(telegram_id, fasting_notified_end_warn=1)
+                except Exception as e:
+                    logger.error(f"Error sending fasting end warning to {telegram_id}: {e}")
+                    
+            # 2. Hourly stage notifications
+            last_notified = user.get('fasting_last_notified_hour')
+            if last_notified is None:
+                last_notified = -1
+                
+            if elapsed_hours > last_notified and elapsed_hours <= target_hours:
+                stage_text = get_fasting_stage_info(elapsed_hours, lang)
+                stage_msg = f"⏳ <b>Голодание ({elapsed_hours}ч / {target_hours}ч):</b>\n\n{stage_text}" if lang == 'ru' else f"⏳ <b>Ochlik ({elapsed_hours}soat / {target_hours}soat):</b>\n\n{stage_text}"
+                try:
+                    await bot.send_message(telegram_id, stage_msg, parse_mode="HTML")
+                    database.update_fasting_state(telegram_id, fasting_last_notified_hour=elapsed_hours)
+                except Exception as e:
+                    logger.error(f"Error sending hourly fasting update to {telegram_id}: {e}")
+                    
+        except Exception as e:
+            logger.error(f"Error in send_fasting_reminders for user {telegram_id}: {e}")
+
 def setup_scheduler(bot: Bot):
     scheduler = AsyncIOScheduler(timezone="Asia/Tashkent")
     
-    # Run every minute to check for meal times
+    # Run every minute to check for meal times & fasting reminders
     scheduler.add_job(send_meal_reminders, "cron", minute="*", args=[bot])
+    scheduler.add_job(send_fasting_reminders, "cron", minute="*", args=[bot])
     
     # Run every Sunday at 20:00
     scheduler.add_job(send_weekly_reports, "cron", day_of_week="sun", hour=20, minute=0, args=[bot])

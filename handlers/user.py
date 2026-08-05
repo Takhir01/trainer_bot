@@ -501,8 +501,28 @@ async def finish_generate_workout(message: Message, state: FSMContext, lang: str
     
     await message.answer(t['generating_workout'])
     
+    # Retrieve recent workouts to avoid duplicates and ensure progression
+    recent_workouts = database.get_recent_workout_history(message.from_user.id, limit=3)
+    
     import services.gemini
-    workout_plan = await services.gemini.generate_workout(user['goal'], lang, user_data=user, duration=duration, location=location, equipment=equipment)
+    workout_plan = await services.gemini.generate_workout(
+        goal=user['goal'],
+        lang=lang,
+        user_data=user,
+        duration=duration,
+        location=location,
+        equipment=equipment,
+        previous_workouts=recent_workouts
+    )
+    
+    # Save generated workout plan to history
+    database.add_workout_history(
+        telegram_id=message.from_user.id,
+        workout_text=workout_plan,
+        duration=duration,
+        location=location,
+        equipment=equipment
+    )
     
     # Parse calories
     import re
@@ -511,8 +531,6 @@ async def finish_generate_workout(message: Message, state: FSMContext, lang: str
         cal_match = re.search(r'Калории:\s*(\d+)', workout_plan, re.IGNORECASE)
         
     calories = int(cal_match.group(1)) if cal_match else int(duration) * 5 # fallback
-    
-    # Clean up the raw "Calories: X" text if needed, but it's fine to leave it.
     
     # Add a Done button
     kb = keyboards.InlineKeyboardMarkup(inline_keyboard=[
@@ -524,9 +542,9 @@ async def finish_generate_workout(message: Message, state: FSMContext, lang: str
     for i in range(0, len(workout_plan), max_len):
         if i + max_len >= len(workout_plan):
             # Last chunk gets the keyboard
-            await message.answer(workout_plan[i:i+max_len], reply_markup=kb)
+            await message.answer(workout_plan[i:i+max_len], reply_markup=kb, parse_mode="HTML")
         else:
-            await message.answer(workout_plan[i:i+max_len])
+            await message.answer(workout_plan[i:i+max_len], parse_mode="HTML")
         
     await state.clear()
 
@@ -717,6 +735,253 @@ async def process_cancel_activity(callback: CallbackQuery, state: FSMContext):
         pass
 
 
+FASTING_HOURS = {
+    'light': 14,
+    'medium': 16,
+    'hard': 18
+}
+
+def get_fasting_stage_info(elapsed_hours: float, lang: str = 'ru') -> str:
+    if elapsed_hours < 4:
+        if lang == 'ru':
+            return "🩸 <b>Фаза 1: Пищеварение (0-4ч)</b>\nУровень сахара в крови приходит в норму, организм усваивает пищу."
+        else:
+            return "🩸 <b>1-bosqich: Ovqat hazm qilish (0-4soat)</b>\nQondagi shakar darajasi me'yorlashmoqda."
+    elif elapsed_hours < 8:
+        if lang == 'ru':
+            return "📉 <b>Фаза 2: Снижение инсулина (4-8ч)</b>\nУровень инсулина снижается, накопление жира прекращается."
+        else:
+            return "📉 <b>2-bosqich: Insulin kamayishi (4-8soat)</b>\nInsulin darajasi tushadi, yog' to'planishi to'xtaydi."
+    elif elapsed_hours < 12:
+        if lang == 'ru':
+            return "🔋 <b>Фаза 3: Истощение гликогена (8-12ч)</b>\nЗапасы гликогена в печени истощаются. Начинается расход жировых запасов."
+        else:
+            return "🔋 <b>3-bosqich: Glikogen sarfi (8-12soat)</b>\nGlikogen zaxiralari tugamoqda, yog' parchala boshlanadi."
+    elif elapsed_hours < 14:
+        if lang == 'ru':
+            return "🔥 <b>Фаза 4: Активное жиросжигание / Кетоз (12-14ч)</b>\nПоздравляем! Ваш организм вошел в фазу активного сжигания жира!"
+        else:
+            return "🔥 <b>4-bosqich: Faol yog' yoqish / Ketoz (12-14soat)</b>\nTashakkur! Tanangiz faol ravishda yog'larni yoqmoqda!"
+    elif elapsed_hours < 16:
+        if lang == 'ru':
+            return "🧬 <b>Фаза 5: Пик гормона роста (14-16ч)</b>\nГормон роста защищает мышцы и стимулирует метаболизм."
+        else:
+            return "🧬 <b>5-bosqich: O'sish gormoni cho'qqisi (14-16soat)</b>\nO'sish gormoni mushaklarni himoya qiladi va metabolizmni tezlashtiradi."
+    else:
+        if lang == 'ru':
+            return "✨ <b>Фаза 6: Аутофагия и омоложение (16+ ч)</b>\nАктивировано клеточное самоочищение (аутофагия). Организм перерабатывает поврежденные клетки!"
+        else:
+            return "✨ <b>6-bosqich: Autofagiya va yangilanish (16+ soat)</b>\nHujayralarni tozalash jarayoni boshlandi!"
+
+@user_router.message(F.text.in_([locales.LOCALES['ru']['btn_fasting'], locales.LOCALES['uz']['btn_fasting']]))
+async def handle_fasting_button(message: Message, state: FSMContext):
+    if not await check_paywall(message): return
+    lang = get_lang(message.from_user.id)
+    user = database.get_user(message.from_user.id)
+    t = locales.LOCALES[lang]
+    
+    plan = user.get('fasting_plan') or 'medium'
+    plan_name = t.get(f"plan_{plan}_name", plan)
+    is_active = bool(user.get('fasting_is_active'))
+    
+    if is_active and user.get('fasting_start_time'):
+        try:
+            start_dt = datetime.datetime.fromisoformat(user['fasting_start_time'])
+            now = database.get_tashkent_now()
+            diff_seconds = max(0, (now - start_dt).total_seconds())
+            elapsed_h = int(diff_seconds // 3600)
+            elapsed_m = int((diff_seconds % 3600) // 60)
+            
+            target_hours = FASTING_HOURS.get(plan, 16)
+            total_target_seconds = target_hours * 3600
+            rem_seconds = max(0, total_target_seconds - diff_seconds)
+            rem_h = int(rem_seconds // 3600)
+            rem_m = int((rem_seconds % 3600) // 60)
+            
+            stage_info = get_fasting_stage_info(diff_seconds / 3600, lang)
+            
+            text = t['fasting_status_active'].format(
+                plan_name=plan_name,
+                elapsed_h=elapsed_h,
+                elapsed_m=elapsed_m,
+                rem_h=rem_h,
+                rem_m=rem_m,
+                stage_info=stage_info
+            )
+        except Exception:
+            text = t['fasting_status_inactive'].format(plan_name=plan_name)
+    else:
+        text = t['fasting_status_inactive'].format(plan_name=plan_name)
+        
+    await message.answer(text, reply_markup=keyboards.get_fasting_menu_keyboard(lang, is_active=is_active), parse_mode="HTML")
+
+@user_router.callback_query(F.data == "fasting_plans")
+async def process_fasting_plans(callback: CallbackQuery):
+    if not await check_paywall(callback, telegram_id=callback.from_user.id): return
+    lang = get_lang(callback.from_user.id)
+    t = locales.LOCALES[lang]
+    await callback.answer()
+    await callback.message.edit_text(t['fasting_select_plan'], reply_markup=keyboards.get_fasting_plans_keyboard(lang))
+
+@user_router.callback_query(F.data.startswith("fast_plan:"))
+async def process_set_fast_plan(callback: CallbackQuery):
+    if not await check_paywall(callback, telegram_id=callback.from_user.id): return
+    plan = callback.data.split(":")[1]
+    lang = get_lang(callback.from_user.id)
+    t = locales.LOCALES[lang]
+    
+    database.update_fasting_state(callback.from_user.id, fasting_plan=plan)
+    await callback.answer(f"✅ {t.get(f'plan_{plan}_name', plan)}")
+    
+    user = database.get_user(callback.from_user.id)
+    plan_name = t.get(f"plan_{plan}_name", plan)
+    is_active = bool(user.get('fasting_is_active'))
+    text = t['fasting_status_inactive'].format(plan_name=plan_name)
+    await callback.message.edit_text(text, reply_markup=keyboards.get_fasting_menu_keyboard(lang, is_active=is_active), parse_mode="HTML")
+
+@user_router.callback_query(F.data == "fasting_start")
+async def process_start_fasting(callback: CallbackQuery):
+    if not await check_paywall(callback, telegram_id=callback.from_user.id): return
+    lang = get_lang(callback.from_user.id)
+    t = locales.LOCALES[lang]
+    user = database.get_user(callback.from_user.id)
+    
+    plan = user.get('fasting_plan') or 'medium'
+    now = database.get_tashkent_now()
+    target_hours = FASTING_HOURS.get(plan, 16)
+    end_dt = now + datetime.timedelta(hours=target_hours)
+    
+    database.update_fasting_state(
+        callback.from_user.id,
+        fasting_is_active=1,
+        fasting_start_time=now.isoformat(),
+        fasting_last_notified_hour=0,
+        fasting_notified_start_warn=1,
+        fasting_notified_end_warn=0
+    )
+    
+    plan_name = t.get(f"plan_{plan}_name", plan)
+    msg = t['fasting_started'].format(
+        plan_name=plan_name,
+        start_time=now.strftime("%H:%M"),
+        end_time=end_dt.strftime("%H:%M (%d.%m)")
+    )
+    
+    await callback.answer()
+    await callback.message.edit_text(msg, reply_markup=keyboards.get_fasting_menu_keyboard(lang, is_active=True), parse_mode="HTML")
+
+@user_router.callback_query(F.data == "fasting_stop")
+async def process_stop_fasting(callback: CallbackQuery):
+    if not await check_paywall(callback, telegram_id=callback.from_user.id): return
+    lang = get_lang(callback.from_user.id)
+    t = locales.LOCALES[lang]
+    user = database.get_user(callback.from_user.id)
+    
+    elapsed_h, elapsed_m = 0, 0
+    if user.get('fasting_start_time'):
+        try:
+            start_dt = datetime.datetime.fromisoformat(user['fasting_start_time'])
+            now = database.get_tashkent_now()
+            diff_seconds = max(0, (now - start_dt).total_seconds())
+            elapsed_h = int(diff_seconds // 3600)
+            elapsed_m = int((diff_seconds % 3600) // 60)
+        except Exception:
+            pass
+            
+    database.update_fasting_state(
+        callback.from_user.id,
+        fasting_is_active=0,
+        fasting_start_time=None,
+        fasting_last_notified_hour=-1,
+        fasting_notified_start_warn=0,
+        fasting_notified_end_warn=0
+    )
+    
+    msg = t['fasting_stopped'].format(hours=elapsed_h, mins=elapsed_m)
+    await callback.answer()
+    await callback.message.edit_text(msg, reply_markup=keyboards.get_fasting_menu_keyboard(lang, is_active=False), parse_mode="HTML")
+
+def calculate_weight_prognosis(telegram_id: int, user: dict, lang: str) -> str:
+    t = locales.LOCALES[lang]
+    weight = user.get('weight')
+    target_weight = user.get('target_weight')
+    
+    if not weight or not target_weight or abs(weight - target_weight) < 0.1:
+        return t['prognosis_no_target']
+        
+    delta_weight = abs(weight - target_weight)
+    
+    height = user.get('height') or 170
+    age = user.get('age') or 25
+    gender = user.get('gender') or 'male'
+    activity = user.get('activity_level') or 'sedentary'
+    
+    if gender == 'male':
+        bmr = (10 * weight) + (6.25 * height) - (5 * age) + 5
+    else:
+        bmr = (10 * weight) + (6.25 * height) - (5 * age) - 161
+        
+    multipliers = {'sedentary': 1.2, 'light': 1.375, 'moderate': 1.55, 'active': 1.725}
+    tdee = bmr * multipliers.get(activity, 1.2)
+    goal_cals = int(tdee - 500) if user.get('goal') == 'lose_weight' else int(tdee + 500)
+    
+    stats = database.get_monthly_stats(telegram_id) or database.get_weekly_stats(telegram_id)
+    
+    if stats and stats.get('days_logged') and stats['days_logged'] > 0:
+        days = stats['days_logged']
+        avg_consumed = (stats.get('sum_consumed') or 0) / days
+        avg_burned = (stats.get('sum_burned') or 0) / days
+        daily_net = avg_consumed - avg_burned
+        daily_deficit = tdee - daily_net
+    else:
+        daily_deficit = 500.0
+        
+    if user.get('goal') == 'lose_weight' and weight > target_weight:
+        if daily_deficit <= 50:
+            return t['prognosis_header'] + t['prognosis_surplus'].format(
+                weight=weight,
+                target_weight=target_weight,
+                delta_weight=delta_weight,
+                goal_cals=goal_cals
+            )
+            
+        total_calories = delta_weight * 7700.0
+        days_needed = int(round(total_calories / daily_deficit))
+        weeks_needed = round(days_needed / 7.0, 1)
+        
+        now = database.get_tashkent_now().date()
+        target_date = (now + datetime.timedelta(days=days_needed)).strftime("%d.%m.%Y")
+        
+        return t['prognosis_header'] + t['prognosis_reach_goal'].format(
+            weight=weight,
+            target_weight=target_weight,
+            delta_weight=delta_weight,
+            deficit=int(daily_deficit),
+            days=days_needed,
+            weeks=weeks_needed,
+            target_date=target_date
+        )
+    elif user.get('goal') == 'gain_weight' and weight < target_weight:
+        daily_surplus = -daily_deficit if daily_deficit < 0 else 400.0
+        total_calories = delta_weight * 5000.0
+        days_needed = int(round(total_calories / daily_surplus))
+        weeks_needed = round(days_needed / 7.0, 1)
+        
+        now = database.get_tashkent_now().date()
+        target_date = (now + datetime.timedelta(days=days_needed)).strftime("%d.%m.%Y")
+        
+        return t['prognosis_header'] + t['prognosis_reach_goal'].format(
+            weight=weight,
+            target_weight=target_weight,
+            delta_weight=delta_weight,
+            deficit=int(daily_surplus),
+            days=days_needed,
+            weeks=weeks_needed,
+            target_date=target_date
+        )
+    else:
+        return t['prognosis_no_target']
+
 @user_router.message(F.text.in_([locales.LOCALES['ru']['btn_stats'], locales.LOCALES['uz']['btn_stats']]))
 async def handle_stats(message: Message, state: FSMContext):
     if not await check_paywall(message): return
@@ -746,23 +1011,28 @@ async def handle_stats(message: Message, state: FSMContext):
         remaining = goal_cals - c_consumed + c_burned
         norms = calculate_macro_norms(weight, goal_cals, goal)
         
+        prognosis_text = calculate_weight_prognosis(message.from_user.id, user, lang)
+        
+        text = t['stats_daily'].format(
+            weight=weight,
+            consumed=c_consumed,
+            goal_calories=goal_cals,
+            burned=c_burned,
+            steps=c_steps,
+            remaining=remaining,
+            protein=c_protein,
+            norm_protein=norms['protein'],
+            carbs=c_carbs,
+            norm_carbs=norms['carbs'],
+            fats=c_fats,
+            norm_fats=norms['fats'],
+            vitamins=c_vitamins
+        ) + prognosis_text
+        
         await message.answer(
-            t['stats_daily'].format(
-                weight=weight,
-                consumed=c_consumed,
-                goal_calories=goal_cals,
-                burned=c_burned,
-                steps=c_steps,
-                remaining=remaining,
-                protein=c_protein,
-                norm_protein=norms['protein'],
-                carbs=c_carbs,
-                norm_carbs=norms['carbs'],
-                fats=c_fats,
-                norm_fats=norms['fats'],
-                vitamins=c_vitamins
-            ),
-            reply_markup=keyboards.get_stats_keyboard(lang)
+            text,
+            reply_markup=keyboards.get_stats_keyboard(lang),
+            parse_mode="HTML"
         )
     except Exception as e:
         print(f"Error in handle_stats: {e}")
@@ -776,6 +1046,7 @@ async def process_stats_period(callback: CallbackQuery):
     period = callback.data.split("_")[1]
     
     user = database.get_user(callback.from_user.id)
+    prognosis_text = calculate_weight_prognosis(callback.from_user.id, user, lang)
     
     if period == "day":
         daily = database.get_or_create_daily_log(callback.from_user.id)
@@ -812,7 +1083,7 @@ async def process_stats_period(callback: CallbackQuery):
             fats=c_fats,
             norm_fats=norms['fats'],
             vitamins=c_vitamins
-        )
+        ) + prognosis_text
     else:
         if period == "week":
             stats = database.get_weekly_stats(callback.from_user.id)
@@ -822,7 +1093,7 @@ async def process_stats_period(callback: CallbackQuery):
             period_name = t['period_month']
             
         if not stats or not stats.get('days_logged'):
-            text = "Нет данных за этот период." if lang == 'ru' else "Bu davr uchun ma'lumot yo'q."
+            text = ("Нет данных за этот период." if lang == 'ru' else "Bu davr uchun ma'lumot yo'q.") + prognosis_text
         else:
             days = stats['days_logged']
             avg_consumed = (stats.get('sum_consumed') or 0) / days
@@ -838,12 +1109,12 @@ async def process_stats_period(callback: CallbackQuery):
                 total_duration=total_duration,
                 total_steps=total_steps,
                 days_logged=days
-            )
+            ) + prognosis_text
             
     try:
-        await callback.message.edit_text(text, reply_markup=keyboards.get_stats_keyboard(lang))
+        await callback.message.edit_text(text, reply_markup=keyboards.get_stats_keyboard(lang), parse_mode="HTML")
     except Exception:
-        pass # message not modified
+        pass
     await callback.answer()
 
 from states import UpdateWeightStates

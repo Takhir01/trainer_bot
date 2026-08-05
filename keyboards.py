@@ -52,11 +52,31 @@ def get_main_menu(lang, is_admin=False):
         keyboard=[
             [KeyboardButton(text=t['btn_advisor']), KeyboardButton(text=t['btn_generate_workout'])],
             [KeyboardButton(text=t['btn_food_log']), KeyboardButton(text=t['btn_workout_log'])],
-            [KeyboardButton(text=t['btn_recipe'])],
+            [KeyboardButton(text=t['btn_recipe']), KeyboardButton(text=t['btn_fasting'])],
             [KeyboardButton(text=t['btn_stats']), KeyboardButton(text=t['btn_settings'])]
         ],
         resize_keyboard=True
     )
+    return keyboard
+
+def get_fasting_menu_keyboard(lang: str, is_active: bool = False) -> InlineKeyboardMarkup:
+    t = LOCALES[lang]
+    buttons = []
+    if is_active:
+        buttons.append([InlineKeyboardButton(text=t['btn_stop_fasting'], callback_data="fasting_stop")])
+    else:
+        buttons.append([InlineKeyboardButton(text=t['btn_start_fasting'], callback_data="fasting_start")])
+    
+    buttons.append([InlineKeyboardButton(text=t['btn_fasting_settings'], callback_data="fasting_plans")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+def get_fasting_plans_keyboard(lang: str) -> InlineKeyboardMarkup:
+    t = LOCALES[lang]
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=t['fasting_plan_light'], callback_data="fast_plan:light")],
+        [InlineKeyboardButton(text=t['fasting_plan_medium'], callback_data="fast_plan:medium")],
+        [InlineKeyboardButton(text=t['fasting_plan_hard'], callback_data="fast_plan:hard")]
+    ])
     return keyboard
 
 def get_stats_keyboard(lang: str) -> InlineKeyboardMarkup:

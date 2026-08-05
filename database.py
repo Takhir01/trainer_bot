@@ -102,6 +102,34 @@ def init_db():
     except sqlite3.OperationalError:
         pass # Column exists
 
+    # Workout history table
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS workout_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        telegram_id INTEGER,
+        workout_text TEXT,
+        duration INTEGER DEFAULT 0,
+        location TEXT DEFAULT '',
+        equipment TEXT DEFAULT '',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(telegram_id) REFERENCES users(telegram_id)
+    )
+    ''')
+
+    # Fasting columns
+    for col_def in [
+        "fasting_plan TEXT DEFAULT 'medium'",
+        "fasting_is_active INTEGER DEFAULT 0",
+        "fasting_start_time TIMESTAMP",
+        "fasting_last_notified_hour INTEGER DEFAULT -1",
+        "fasting_notified_start_warn INTEGER DEFAULT 0",
+        "fasting_notified_end_warn INTEGER DEFAULT 0"
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE users ADD COLUMN {col_def}")
+        except sqlite3.OperationalError:
+            pass
+
     conn.commit()
     conn.close()
 
@@ -359,4 +387,68 @@ def get_monthly_stats(telegram_id):
     stats = cursor.fetchone()
     conn.close()
     return dict(stats) if stats and stats['days_logged'] else None
+
+def add_workout_history(telegram_id, workout_text, duration=0, location='', equipment=''):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+    INSERT INTO workout_history (telegram_id, workout_text, duration, location, equipment)
+    VALUES (?, ?, ?, ?, ?)
+    ''', (telegram_id, workout_text, duration, location, equipment))
+    conn.commit()
+    conn.close()
+
+def get_recent_workout_history(telegram_id, limit=3):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+    SELECT workout_text, duration, location, created_at
+    FROM workout_history
+    WHERE telegram_id=?
+    ORDER BY id DESC LIMIT ?
+    ''', (telegram_id, limit))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def update_fasting_state(telegram_id, fasting_plan=None, fasting_is_active=None, fasting_start_time=None, fasting_last_notified_hour=None, fasting_notified_start_warn=None, fasting_notified_end_warn=None):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    updates = []
+    params = []
+    if fasting_plan is not None:
+        updates.append("fasting_plan=?")
+        params.append(fasting_plan)
+    if fasting_is_active is not None:
+        updates.append("fasting_is_active=?")
+        params.append(fasting_is_active)
+    if fasting_start_time is not None:
+        updates.append("fasting_start_time=?")
+        params.append(fasting_start_time)
+    if fasting_last_notified_hour is not None:
+        updates.append("fasting_last_notified_hour=?")
+        params.append(fasting_last_notified_hour)
+    if fasting_notified_start_warn is not None:
+        updates.append("fasting_notified_start_warn=?")
+        params.append(fasting_notified_start_warn)
+    if fasting_notified_end_warn is not None:
+        updates.append("fasting_notified_end_warn=?")
+        params.append(fasting_notified_end_warn)
+        
+    if updates:
+        params.append(telegram_id)
+        query = f"UPDATE users SET {', '.join(updates)} WHERE telegram_id=?"
+        cursor.execute(query, tuple(params))
+        conn.commit()
+    conn.close()
+
+def get_active_fasting_users():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE fasting_is_active=1 OR (fasting_plan IS NOT NULL AND fasting_plan != '')")
+    users = cursor.fetchall()
+    conn.close()
+    return [dict(u) for u in users]
+
 

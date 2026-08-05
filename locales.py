@@ -97,6 +97,32 @@ LOCALES = {
         
         'ask_new_weight': '⚖️ Введите ваш новый вес в килограммах (например, 75 или 75.5):',
         'weight_updated': '✅ Ваш вес обновлен: {weight} кг.\n🔥 Ваша новая норма калорий: {calories} ккал.',
+        
+        # Fasting
+        'btn_fasting': '⏳ Голодание',
+        'fasting_title': '⏳ <b>Интервальное голодание</b>',
+        'fasting_select_plan': 'Выберите режим интервального голодания:',
+        'fasting_plan_light': '🟢 Легкий (14/10) — 14ч голода',
+        'fasting_plan_medium': '🟡 Средний (16/8) — 16ч голода',
+        'fasting_plan_hard': '🔴 Сложный (18/6) — 18ч голода',
+        'btn_start_fasting': '🚀 Начать голодание',
+        'btn_stop_fasting': '🏁 Завершить голодание',
+        'btn_fasting_settings': '⚙️ Выбрать режим',
+        'fasting_started': '🚀 <b>Голодание начато!</b>\n\nРежим: <b>{plan_name}</b>\nНачало: {start_time}\nОкончание голодания: {end_time}\n\nЯ буду отслеживать состояние и информировать вас о фазах каждый час!',
+        'fasting_stopped': '🏁 <b>Голодание завершено!</b>\nВы проголодали {hours}ч {mins}мин. Отличная работа! 💪',
+        'fasting_status_active': '⏳ <b>Интервальное голодание: АКТИВНО 🟢</b>\n\nРежим: <b>{plan_name}</b>\nПрошло: <b>{elapsed_h}ч {elapsed_m}мин</b>\nОсталось до еды: <b>{rem_h}ч {rem_m}мин</b>\n\n{stage_info}',
+        'fasting_status_inactive': '⏳ <b>Интервальное голодание</b>\n\nВыбранный режим: <b>{plan_name}</b>\nСтатус: Не активно 🔴\n\nНажмите «🚀 Начать голодание», когда прекратите прием пищи.',
+        'fasting_warn_start': '⏰ <b>Внимание!</b> До начала интервального голодания осталось 30 минут! Завершите прием пищи.',
+        'fasting_warn_end': '⏰ <b>Внимание!</b> До завершения окна голодания осталось 30 минут! Скоро можно кушать.',
+        'plan_light_name': 'Легкий (14/10)',
+        'plan_medium_name': 'Средний (16/8)',
+        'plan_hard_name': 'Сложный (18/6)',
+        
+        # Prognosis
+        'prognosis_header': '\n\n📈 <b>Прогноз достижения цели:</b>\n',
+        'prognosis_reach_goal': '🎯 Цель: <b>{weight} кг ➔ {target_weight} кг</b> (осталось {delta_weight:.1f} кг)\n🔥 Средний суточный дефицит: <b>~{deficit} ккал/день</b>\n⏱ Примерно осталось: <b>{days} дней</b> (~{weeks} нед.)\n📅 Предполагаемая дата: <b>{target_date}</b>',
+        'prognosis_surplus': '🎯 Цель: <b>{weight} кг ➔ {target_weight} кг</b> (осталось {delta_weight:.1f} кг)\n⚠️ Сейчас вы в профиците калорий. Для сброса веса держите рацион до ~{goal_cals} ккал/день.',
+        'prognosis_no_target': '\n💡 Укажите целевой вес в профиле для расчета даты достижения цели.',
     },
     'uz': {
         'lang_selected': 'O\'zbek tili tanlandi!',
@@ -196,5 +222,31 @@ LOCALES = {
         
         'ask_new_weight': '⚖️ Yangi vazningizni kilogrammda kiriting (masalan, 75 yoki 75.5):',
         'weight_updated': '✅ Vazningiz yangilandi: {weight} kg.\n🔥 Yangi kaloriya normasi: {calories} kkal.',
+        
+        # Fasting
+        'btn_fasting': '⏳ Ro\'za (Ochlik)',
+        'fasting_title': '⏳ <b>Interval ochlik</b>',
+        'fasting_select_plan': 'Interval ochlik rejimini tanlang:',
+        'fasting_plan_light': '🟢 Yengil (14/10) — 14soat ochlik',
+        'fasting_plan_medium': '🟡 O\'rtacha (16/8) — 16soat ochlik',
+        'fasting_plan_hard': '🔴 Qiyin (18/6) — 18soat ochlik',
+        'btn_start_fasting': '🚀 Ochlikni boshlash',
+        'btn_stop_fasting': '🏁 Ochlikni yakunlash',
+        'btn_fasting_settings': '⚙️ Rejimni tanlash',
+        'fasting_started': '🚀 <b>Ochlik boshlandi!</b>\n\nRejim: <b>{plan_name}</b>\nBoshlanishi: {start_time}\nTugashi: {end_time}\n\nHar soatda holatingiz haqida xabar berib boraman!',
+        'fasting_stopped': '🏁 <b>Ochlik yakunlandi!</b>\nSiz {hours}soat {mins}daq och qoldingiz. Ajoyib natija! 💪',
+        'fasting_status_active': '⏳ <b>Interval ochlik: FAOL 🟢</b>\n\nRejim: <b>{plan_name}</b>\nO\'tdi: <b>{elapsed_h}soat {elapsed_m}daq</b>\nQoldi: <b>{rem_h}soat {rem_m}daq</b>\n\n{stage_info}',
+        'fasting_status_inactive': '⏳ <b>Interval ochlik</b>\n\nTanlangan rejim: <b>{plan_name}</b>\nHolat: Faol emas 🔴\n\nOvqatlanishni to\'xtatganingizda «🚀 Ochlikni boshlash» tugmasini bosing.',
+        'fasting_warn_start': '⏰ <b>Diqqat!</b> Ochlik boshlanishiga 30 daqiqa qoldi! Ovqatlanishni yakunlang.',
+        'fasting_warn_end': '⏰ <b>Diqqat!</b> Ochlik tugashiga 30 daqiqa qoldi! Tez orada ovqatlanishingiz mumkin.',
+        'plan_light_name': 'Yengil (14/10)',
+        'plan_medium_name': 'O\'rtacha (16/8)',
+        'plan_hard_name': 'Qiyin (18/6)',
+        
+        # Prognosis
+        'prognosis_header': '\n\n📈 <b>Maqsadga erishish prognozi:</b>\n',
+        'prognosis_reach_goal': '🎯 Maqsad: <b>{weight} kg ➔ {target_weight} kg</b> (qoldi {delta_weight:.1f} kg)\n🔥 O\'rtacha kunlik defitsit: <b>~{deficit} kkal/kun</b>\n⏱ Taxminan qoldi: <b>{days} kun</b> (~{weeks} hafta)\n📅 Taxminiy sana: <b>{target_date}</b>',
+        'prognosis_surplus': '🎯 Maqsad: <b>{weight} kg ➔ {target_weight} kg</b> (qoldi {delta_weight:.1f} kg)\n⚠️ Hozirda kaloriyalar ko\'p iste\'mol qilinmoqda. Vazn yo\'qotish uchun ratsionni ~{goal_cals} kkalda ushlang.',
+        'prognosis_no_target': '\n💡 Maqsadga erishish sanasini hisoblash uchun profilda maqsadli vaznni kiriting.',
     }
 }

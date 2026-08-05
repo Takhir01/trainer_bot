@@ -153,7 +153,7 @@ async def get_meal_advice(goal: str, remaining_calories: int, meal_type: str, la
         print(f"Error generating advice: {e}")
         return "Sorry, I couldn't generate advice right now."
 
-async def generate_workout(goal: str, lang: str = 'ru', user_data: dict = None, duration: int = 30, location: str = 'home', equipment: str = 'none') -> str:
+async def generate_workout(goal: str, lang: str = 'ru', user_data: dict = None, duration: int = 30, location: str = 'home', equipment: str = 'none', previous_workouts: list = None) -> str:
     if not model:
         return "Gemini API key not configured"
         
@@ -164,9 +164,15 @@ async def generate_workout(goal: str, lang: str = 'ru', user_data: dict = None, 
         
     loc_str = "at home" if location == 'home' else "at the gym"
     
+    history_str = ""
+    if previous_workouts:
+        formatted_prev = "\n- ".join([w['workout_text'].replace('\n', ' ')[:150] for w in previous_workouts if isinstance(w, dict) and w.get('workout_text')])
+        if formatted_prev:
+            history_str = f"\nPREVIOUS WORKOUTS GIVEN TO USER RECENTLY:\n- {formatted_prev}\nCRITICAL: Analyze the user's previous workouts above. DO NOT duplicate exact exercise sequences! Rotate muscle targets or progress exercises intelligently so training remains varied and effective."
+
     prompt = (
         f"I want to {goal_str}.{target_info} Give me a specific {duration}-minute workout routine to do {loc_str}. "
-        f"Available equipment: {equipment}. "
+        f"Available equipment: {equipment}.{history_str} "
         f"IMPORTANT: Keep your answer VERY short and practical. Just list the exercises (with sets/reps). "
         f"At the VERY END of your response, you MUST include a line exactly like this: 'Calories: X' where X is the estimated total calories burned. "
         f"Respond in {'Russian' if lang == 'ru' else 'Uzbek'} language."
