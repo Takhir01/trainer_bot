@@ -22,26 +22,22 @@ async def check_and_send_startup_update(bot: Bot):
     update_file = "UPDATE_TEXT.txt"
     if os.path.exists(update_file):
         try:
-            with open(update_file, "r", encoding="utf-8") as f:
-                update_text = f.read().strip()
-            
-            if update_text:
-                users = database.get_all_users()
-                start_kb = InlineKeyboardMarkup(inline_keyboard=[
-                    [InlineKeyboardButton(text="🚀 Запустить / Ishga tushirish", url=f"https://t.me/{(await bot.get_me()).username}?start=update")]
-                ])
-                count = 0
-                for user in users:
-                    try:
-                        await bot.send_message(
-                            user['telegram_id'],
-                            f"🚀 <b>ВНИМАНИЕ! Бот обновлен!</b> 🚀\n\n{update_text}\n\n👉 Нажмите кнопку ниже или введите /start, чтобы применить обновления!",
-                            reply_markup=start_kb
-                        )
-                        count += 1
-                    except Exception as e:
-                        logger.error(f"Error sending update to {user.get('telegram_id')}: {e}")
-                print(f"Announcement sent to {count} users.")
+            users = database.get_all_users()
+            start_kb = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🚀 Запустить / Ishga tushirish", url=f"https://t.me/{(await bot.get_me()).username}?start=update")]
+            ])
+            count = 0
+            for user in users:
+                try:
+                    await bot.send_message(
+                        user['telegram_id'],
+                        "🚀 <b>Бот обновлен!</b> 🚀\n\n👉 Нажмите кнопку ниже или введите /start, чтобы применить обновления!",
+                        reply_markup=start_kb
+                    )
+                    count += 1
+                except Exception as e:
+                    logger.error(f"Error sending update to {user.get('telegram_id')}: {e}")
+            print(f"Announcement sent to {count} users.")
             os.remove(update_file)
         except Exception as e:
             logger.error(f"Error processing update announcement: {e}")
